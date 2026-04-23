@@ -1,0 +1,604 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Intelligence Query Engine — Docs</title>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&family=Syne:wght@400;700;800&display=swap" rel="stylesheet"/>
+<style>
+  :root {
+    --bg: #0b0d0f;
+    --surface: #131619;
+    --surface2: #1a1e24;
+    --border: #22282f;
+    --accent: #00e5a0;
+    --accent2: #38bdf8;
+    --danger: #f43f5e;
+    --warn: #fb923c;
+    --purple: #a78bfa;
+    --text: #dde4ee;
+    --muted: #566070;
+    --mono: 'JetBrains Mono', monospace;
+    --sans: 'Syne', sans-serif;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: var(--bg); color: var(--text); font-family: var(--sans); min-height: 100vh; overflow-x: hidden; }
+  body::before {
+    content: '';
+    position: fixed; inset: 0;
+    background-image: linear-gradient(rgba(0,229,160,.025) 1px, transparent 1px), linear-gradient(90deg, rgba(0,229,160,.025) 1px, transparent 1px);
+    background-size: 48px 48px;
+    pointer-events: none; z-index: 0;
+  }
+  .wrap { position: relative; z-index: 1; max-width: 980px; margin: 0 auto; padding: 0 24px 100px; }
+
+  /* header */
+  header { padding: 56px 0 44px; border-bottom: 1px solid var(--border); margin-bottom: 44px; }
+  .badge { display: inline-block; font-family: var(--mono); font-size: 10px; color: var(--accent); border: 1px solid rgba(0,229,160,.35); padding: 3px 10px; border-radius: 2px; margin-bottom: 14px; letter-spacing: .12em; }
+  header h1 { font-size: clamp(28px,5vw,52px); font-weight: 800; line-height: 1.05; letter-spacing: -.02em; }
+  header h1 span { color: var(--accent); }
+  header p { margin-top: 12px; color: var(--muted); font-family: var(--mono); font-size: 12px; max-width: 500px; line-height: 1.6; }
+
+  /* env bar */
+  .env-bar { display: flex; align-items: center; gap: 12px; margin-bottom: 44px; flex-wrap: wrap; }
+  .env-bar label { font-family: var(--mono); font-size: 11px; color: var(--muted); }
+  .env-toggle { display: flex; background: var(--surface); border: 1px solid var(--border); border-radius: 6px; overflow: hidden; }
+  .env-toggle button { font-family: var(--mono); font-size: 11px; padding: 8px 16px; border: none; background: transparent; color: var(--muted); cursor: pointer; transition: all .2s; }
+  .env-toggle button.active { background: var(--accent); color: #000; font-weight: 600; }
+  #custom-url { background: var(--surface); border: 1px solid var(--border); color: var(--text); font-family: var(--mono); font-size: 12px; padding: 8px 14px; border-radius: 6px; width: 300px; outline: none; transition: border .2s; }
+  #custom-url:focus { border-color: var(--accent); }
+  .base-display { font-family: var(--mono); font-size: 12px; color: var(--accent); background: rgba(0,229,160,.07); padding: 8px 14px; border-radius: 6px; border: 1px solid rgba(0,229,160,.2); }
+
+  /* section title */
+  .section-title { font-size: 10px; font-family: var(--mono); color: var(--muted); letter-spacing: .15em; text-transform: uppercase; margin-bottom: 16px; padding-bottom: 10px; border-bottom: 1px solid var(--border); margin-top: 48px; }
+  .section-title:first-of-type { margin-top: 0; }
+
+  /* endpoint card */
+  .endpoint { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; margin-bottom: 16px; overflow: hidden; }
+  .ep-header { display: flex; align-items: center; gap: 12px; padding: 16px 20px; cursor: pointer; user-select: none; transition: background .15s; }
+  .ep-header:hover { background: var(--surface2); }
+  .method { font-family: var(--mono); font-size: 10px; font-weight: 600; padding: 4px 10px; border-radius: 4px; min-width: 54px; text-align: center; letter-spacing: .05em; }
+  .method.get    { background: rgba(56,189,248,.12); color: var(--accent2); border: 1px solid rgba(56,189,248,.3); }
+  .method.post   { background: rgba(0,229,160,.12);  color: var(--accent);  border: 1px solid rgba(0,229,160,.3); }
+  .method.delete { background: rgba(244,63,94,.12);  color: var(--danger);  border: 1px solid rgba(244,63,94,.3); }
+  .ep-path { font-family: var(--mono); font-size: 13px; flex: 1; }
+  .ep-desc { font-family: var(--mono); font-size: 11px; color: var(--muted); }
+  .ep-chevron { font-size: 11px; color: var(--muted); transition: transform .2s; }
+  .endpoint.open .ep-chevron { transform: rotate(180deg); }
+  .ep-body { display: none; border-top: 1px solid var(--border); }
+  .endpoint.open .ep-body { display: block; }
+
+  /* cols */
+  .ep-cols { display: grid; grid-template-columns: 1fr 1fr; }
+  @media(max-width:640px) { .ep-cols { grid-template-columns: 1fr; } }
+  .ep-col { padding: 20px; border-right: 1px solid var(--border); }
+  .ep-col:last-child { border-right: none; }
+  .col-label { font-family: var(--mono); font-size: 10px; color: var(--muted); letter-spacing: .12em; text-transform: uppercase; margin-bottom: 14px; }
+
+  /* fields */
+  .field-row { margin-bottom: 10px; }
+  .field-row label { display: block; font-family: var(--mono); font-size: 11px; color: var(--muted); margin-bottom: 4px; }
+  .field-row input, .field-row select {
+    width: 100%; background: var(--bg); border: 1px solid var(--border);
+    color: var(--text); font-family: var(--mono); font-size: 12px;
+    padding: 8px 11px; border-radius: 5px; outline: none; transition: border .2s;
+  }
+  .field-row input:focus, .field-row select:focus { border-color: var(--accent); }
+  .field-row select option { background: var(--bg); }
+  .field-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+
+  /* buttons */
+  .send-btn { font-family: var(--mono); font-size: 11px; font-weight: 600; padding: 9px 20px; border-radius: 5px; border: none; cursor: pointer; letter-spacing: .05em; transition: opacity .2s, transform .1s; margin-top: 6px; }
+  .send-btn:active { transform: scale(.97); }
+  .send-btn.get-btn    { background: var(--accent2); color: #000; }
+  .send-btn.post-btn   { background: var(--accent);  color: #000; }
+  .send-btn.delete-btn { background: var(--danger);  color: #fff; }
+  .send-btn.nlp-btn    { background: var(--purple);  color: #000; }
+
+  /* response */
+  .response-area { position: relative; }
+  .status-bar { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; min-height: 22px; }
+  .status-pill { font-family: var(--mono); font-size: 10px; padding: 2px 10px; border-radius: 20px; font-weight: 600; }
+  .status-pill.ok   { background: rgba(0,229,160,.15); color: var(--accent); }
+  .status-pill.err  { background: rgba(244,63,94,.15);  color: var(--danger); }
+  .status-pill.warn { background: rgba(251,146,60,.15); color: var(--warn); }
+  .status-pill.idle { background: var(--border); color: var(--muted); }
+  .latency { font-family: var(--mono); font-size: 11px; color: var(--muted); }
+  pre.rjson { background: var(--bg); border: 1px solid var(--border); border-radius: 5px; padding: 13px; font-family: var(--mono); font-size: 11px; line-height: 1.65; overflow-x: auto; white-space: pre-wrap; word-break: break-all; min-height: 80px; color: var(--muted); max-height: 420px; overflow-y: auto; }
+  pre.rjson.loaded { color: var(--text); }
+  .copy-btn { position: absolute; top: 26px; right: 6px; background: var(--surface2); border: 1px solid var(--border); color: var(--muted); font-family: var(--mono); font-size: 10px; padding: 3px 9px; border-radius: 4px; cursor: pointer; transition: color .2s, border-color .2s; }
+  .copy-btn:hover { color: var(--accent); border-color: var(--accent); }
+
+  /* note */
+  .note { font-family: var(--mono); font-size: 11px; color: var(--muted); background: rgba(56,189,248,.05); border: 1px solid rgba(56,189,248,.12); border-radius: 5px; padding: 9px 13px; margin-top: 10px; line-height: 1.65; }
+  .note.nlp-note { background: rgba(167,139,250,.05); border-color: rgba(167,139,250,.15); }
+
+  /* json highlight */
+  .jk { color: #7dd3fc; }
+  .js { color: #86efac; }
+  .jn { color: #fbbf24; }
+  .jb { color: #f472b6; }
+  .jz { color: var(--muted); }
+
+  /* spinner */
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .spinner { display: inline-block; width: 11px; height: 11px; border: 2px solid var(--border); border-top-color: var(--accent); border-radius: 50%; animation: spin .6s linear infinite; vertical-align: middle; margin-right: 5px; }
+
+  /* keyword chips */
+  .chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+  .chip { font-family: var(--mono); font-size: 10px; padding: 3px 10px; border-radius: 20px; background: rgba(167,139,250,.1); border: 1px solid rgba(167,139,250,.25); color: var(--purple); cursor: pointer; transition: background .15s; }
+  .chip:hover { background: rgba(167,139,250,.2); }
+
+  @keyframes fadeUp { from { opacity:0; transform:translateY(10px); } to { opacity:1; transform:none; } }
+  .endpoint { animation: fadeUp .35s ease both; }
+  .endpoint:nth-child(1){animation-delay:.04s} .endpoint:nth-child(2){animation-delay:.08s}
+  .endpoint:nth-child(3){animation-delay:.12s} .endpoint:nth-child(4){animation-delay:.16s}
+  .endpoint:nth-child(5){animation-delay:.20s}
+
+  footer { margin-top: 60px; padding-top: 20px; border-top: 1px solid var(--border); font-family: var(--mono); font-size: 11px; color: var(--muted); }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header>
+  <div class="badge">Stage 2 · Intelligence Query Engine</div>
+  <h1>Insighta Labs<br/><span>API Docs</span></h1>
+  <p>// Filtering · Sorting · Pagination · Natural Language Search<br/>Test every endpoint live from this page</p>
+</header>
+
+<!-- ENV BAR -->
+<div class="env-bar">
+  <label>BASE URL</label>
+  <div class="env-toggle">
+    <button class="active" onclick="setEnv('local')">Local</button>
+    <button onclick="setEnv('prod')">Production</button>
+    <button onclick="setEnv('custom')">Custom</button>
+  </div>
+  <div id="custom-url-wrap" style="display:none">
+    <input id="custom-url" type="text" placeholder="https://your-api.vercel.app" oninput="applyCustom()"/>
+  </div>
+  <div class="base-display" id="base-display">http://localhost:3000</div>
+</div>
+
+<!-- ── GET ALL PROFILES ── -->
+<div class="section-title">Endpoints</div>
+
+<div class="endpoint" id="ep-list">
+  <div class="ep-header" onclick="toggle('ep-list')">
+    <span class="method get">GET</span>
+    <span class="ep-path">/api/profiles</span>
+    <span class="ep-desc">Filter · sort · paginate</span>
+    <span class="ep-chevron">▼</span>
+  </div>
+  <div class="ep-body">
+    <div class="ep-cols">
+      <div class="ep-col">
+        <div class="col-label">Filters</div>
+        <div class="field-grid">
+          <div class="field-row">
+            <label>gender</label>
+            <select id="l-gender"><option value="">any</option><option>male</option><option>female</option></select>
+          </div>
+          <div class="field-row">
+            <label>age_group</label>
+            <select id="l-agegroup"><option value="">any</option><option>child</option><option>teenager</option><option>adult</option><option>senior</option></select>
+          </div>
+          <div class="field-row">
+            <label>country_id</label>
+            <input type="text" id="l-country" placeholder="NG, GH, US …"/>
+          </div>
+          <div class="field-row">
+            <label>min_age</label>
+            <input type="number" id="l-minage" placeholder="e.g. 18"/>
+          </div>
+          <div class="field-row">
+            <label>max_age</label>
+            <input type="number" id="l-maxage" placeholder="e.g. 40"/>
+          </div>
+          <div class="field-row">
+            <label>min_gender_probability</label>
+            <input type="number" id="l-mingp" placeholder="0.0 – 1.0" step="0.01"/>
+          </div>
+          <div class="field-row">
+            <label>min_country_probability</label>
+            <input type="number" id="l-mincp" placeholder="0.0 – 1.0" step="0.01"/>
+          </div>
+        </div>
+        <div class="col-label" style="margin-top:14px">Sorting &amp; Pagination</div>
+        <div class="field-grid">
+          <div class="field-row">
+            <label>sort_by</label>
+            <select id="l-sortby"><option value="">default</option><option>age</option><option>created_at</option><option>gender_probability</option></select>
+          </div>
+          <div class="field-row">
+            <label>order</label>
+            <select id="l-order"><option value="">default</option><option>asc</option><option>desc</option></select>
+          </div>
+          <div class="field-row">
+            <label>page</label>
+            <input type="number" id="l-page" placeholder="1" value="1"/>
+          </div>
+          <div class="field-row">
+            <label>limit (max 50)</label>
+            <input type="number" id="l-limit" placeholder="10" value="10"/>
+          </div>
+        </div>
+        <button class="send-btn get-btn" onclick="runList()">Send Request →</button>
+      </div>
+      <div class="ep-col">
+        <div class="col-label">Response</div>
+        <div class="response-area">
+          <div class="status-bar">
+            <span class="status-pill idle" id="list-status">idle</span>
+            <span class="latency" id="list-latency"></span>
+          </div>
+          <pre class="rjson" id="list-res">// response will appear here</pre>
+          <button class="copy-btn" onclick="copyRes('list-res')">copy</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── NLP SEARCH ── -->
+<div class="endpoint" id="ep-search">
+  <div class="ep-header" onclick="toggle('ep-search')">
+    <span class="method get">GET</span>
+    <span class="ep-path">/api/profiles/search</span>
+    <span class="ep-desc">Natural language query</span>
+    <span class="ep-chevron">▼</span>
+  </div>
+  <div class="ep-body">
+    <div class="ep-cols">
+      <div class="ep-col">
+        <div class="col-label">Query</div>
+        <div class="field-row">
+          <label>q — plain English query</label>
+          <input type="text" id="s-query" placeholder="e.g. young males from nigeria"/>
+        </div>
+        <div class="field-grid">
+          <div class="field-row">
+            <label>page</label>
+            <input type="number" id="s-page" placeholder="1" value="1"/>
+          </div>
+          <div class="field-row">
+            <label>limit</label>
+            <input type="number" id="s-limit" placeholder="10" value="10"/>
+          </div>
+        </div>
+        <button class="send-btn nlp-btn" onclick="runSearch()">Search →</button>
+        <div class="note nlp-note" style="margin-top:12px">
+          <strong style="color:var(--purple)">Supported query keywords</strong><br/>
+          Click any chip to try it:
+        </div>
+        <div class="chips">
+          <span class="chip" onclick="setNlp('young males from nigeria')">young males from nigeria</span>
+          <span class="chip" onclick="setNlp('females above 30')">females above 30</span>
+          <span class="chip" onclick="setNlp('adult males from kenya')">adult males from kenya</span>
+          <span class="chip" onclick="setNlp('teenagers from ghana')">teenagers from ghana</span>
+          <span class="chip" onclick="setNlp('senior females')">senior females</span>
+          <span class="chip" onclick="setNlp('people from angola')">people from angola</span>
+          <span class="chip" onclick="setNlp('males between 20 and 35')">males between 20 and 35</span>
+          <span class="chip" onclick="setNlp('females under 25')">females under 25</span>
+          <span class="chip" onclick="setNlp('male and female teenagers above 17')">male and female teenagers above 17</span>
+          <span class="chip" onclick="setNlp('children from south africa')">children from south africa</span>
+          <span class="chip" onclick="setNlp('elderly people from egypt')">elderly people from egypt</span>
+        </div>
+      </div>
+      <div class="ep-col">
+        <div class="col-label">Response</div>
+        <div class="response-area">
+          <div class="status-bar">
+            <span class="status-pill idle" id="search-status">idle</span>
+            <span class="latency" id="search-latency"></span>
+          </div>
+          <pre class="rjson" id="search-res">// response will appear here</pre>
+          <button class="copy-btn" onclick="copyRes('search-res')">copy</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── GET ONE ── -->
+<div class="endpoint" id="ep-get">
+  <div class="ep-header" onclick="toggle('ep-get')">
+    <span class="method get">GET</span>
+    <span class="ep-path">/api/profiles/:id</span>
+    <span class="ep-desc">Fetch single profile by UUID</span>
+    <span class="ep-chevron">▼</span>
+  </div>
+  <div class="ep-body">
+    <div class="ep-cols">
+      <div class="ep-col">
+        <div class="col-label">Path Parameter</div>
+        <div class="field-row">
+          <label>id (UUID v7)</label>
+          <input type="text" id="get-id" placeholder="paste a profile id here"/>
+        </div>
+        <button class="send-btn get-btn" onclick="runGet()">Send Request →</button>
+        <div class="note">Returns 404 if no profile found with that UUID.</div>
+      </div>
+      <div class="ep-col">
+        <div class="col-label">Response</div>
+        <div class="response-area">
+          <div class="status-bar">
+            <span class="status-pill idle" id="get-status">idle</span>
+            <span class="latency" id="get-latency"></span>
+          </div>
+          <pre class="rjson" id="get-res">// response will appear here</pre>
+          <button class="copy-btn" onclick="copyRes('get-res')">copy</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── CREATE ── -->
+<div class="endpoint" id="ep-create">
+  <div class="ep-header" onclick="toggle('ep-create')">
+    <span class="method post">POST</span>
+    <span class="ep-path">/api/profiles</span>
+    <span class="ep-desc">Create a new profile</span>
+    <span class="ep-chevron">▼</span>
+  </div>
+  <div class="ep-body">
+    <div class="ep-cols">
+      <div class="ep-col">
+        <div class="col-label">Request Body</div>
+        <div class="field-row">
+          <label>name (string, required)</label>
+          <input type="text" id="create-name" placeholder="e.g. amara"/>
+        </div>
+        <button class="send-btn post-btn" onclick="runCreate()">Send Request →</button>
+        <div class="note">Returns 201 on creation, 200 if name already exists. After a successful create, the ID is auto-filled into the GET and DELETE fields above.</div>
+      </div>
+      <div class="ep-col">
+        <div class="col-label">Response</div>
+        <div class="response-area">
+          <div class="status-bar">
+            <span class="status-pill idle" id="create-status">idle</span>
+            <span class="latency" id="create-latency"></span>
+          </div>
+          <pre class="rjson" id="create-res">// response will appear here</pre>
+          <button class="copy-btn" onclick="copyRes('create-res')">copy</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── DELETE ── -->
+<div class="endpoint" id="ep-del">
+  <div class="ep-header" onclick="toggle('ep-del')">
+    <span class="method delete">DELETE</span>
+    <span class="ep-path">/api/profiles/:id</span>
+    <span class="ep-desc">Delete a profile by UUID</span>
+    <span class="ep-chevron">▼</span>
+  </div>
+  <div class="ep-body">
+    <div class="ep-cols">
+      <div class="ep-col">
+        <div class="col-label">Path Parameter</div>
+        <div class="field-row">
+          <label>id (UUID v7)</label>
+          <input type="text" id="del-id" placeholder="paste a profile id here"/>
+        </div>
+        <button class="send-btn delete-btn" onclick="runDelete()">Send Request →</button>
+        <div class="note">Returns 204 No Content on success. Returns 404 if not found.</div>
+      </div>
+      <div class="ep-col">
+        <div class="col-label">Response</div>
+        <div class="response-area">
+          <div class="status-bar">
+            <span class="status-pill idle" id="del-status">idle</span>
+            <span class="latency" id="del-latency"></span>
+          </div>
+          <pre class="rjson" id="del-res">// response will appear here</pre>
+          <button class="copy-btn" onclick="copyRes('del-res')">copy</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- NLP Reference -->
+<div class="section-title">Natural Language Parser Reference</div>
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+  <div style="background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:16px">
+    <div style="font-family:var(--mono);font-size:11px;color:var(--purple);margin-bottom:10px;font-weight:600">Gender keywords</div>
+    <div style="font-family:var(--mono);font-size:11px;color:var(--muted);line-height:2">
+      male, males, man, men → <span style="color:var(--text)">gender=male</span><br/>
+      female, females, woman, women → <span style="color:var(--text)">gender=female</span><br/>
+      "male and female" → <span style="color:var(--text)">no gender filter</span>
+    </div>
+  </div>
+  <div style="background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:16px">
+    <div style="font-family:var(--mono);font-size:11px;color:var(--purple);margin-bottom:10px;font-weight:600">Age keywords</div>
+    <div style="font-family:var(--mono);font-size:11px;color:var(--muted);line-height:2">
+      young → <span style="color:var(--text)">min_age=16, max_age=24</span><br/>
+      above/over/older than N → <span style="color:var(--text)">min_age=N</span><br/>
+      below/under/younger than N → <span style="color:var(--text)">max_age=N</span><br/>
+      between N and M → <span style="color:var(--text)">min_age=N, max_age=M</span>
+    </div>
+  </div>
+  <div style="background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:16px">
+    <div style="font-family:var(--mono);font-size:11px;color:var(--purple);margin-bottom:10px;font-weight:600">Age group keywords</div>
+    <div style="font-family:var(--mono);font-size:11px;color:var(--muted);line-height:2">
+      child, children, kids → <span style="color:var(--text)">age_group=child</span><br/>
+      teenager, teen, teens → <span style="color:var(--text)">age_group=teenager</span><br/>
+      adult, adults → <span style="color:var(--text)">age_group=adult</span><br/>
+      senior, seniors, elderly → <span style="color:var(--text)">age_group=senior</span>
+    </div>
+  </div>
+  <div style="background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:16px">
+    <div style="font-family:var(--mono);font-size:11px;color:var(--purple);margin-bottom:10px;font-weight:600">Country keywords</div>
+    <div style="font-family:var(--mono);font-size:11px;color:var(--muted);line-height:2">
+      from/in + country name → <span style="color:var(--text)">country_id=ISO</span><br/>
+      "nigeria" → NG, "ghana" → GH<br/>
+      "south africa" → ZA, "kenya" → KE<br/>
+      2-letter ISO also supported
+    </div>
+  </div>
+</div>
+
+<footer>Intelligence Query Engine · Node.js · Express · PostgreSQL (Neon) · Insighta Labs</footer>
+</div>
+
+<script>
+let BASE = 'http://localhost:3000';
+const PROD_URL = '';
+
+function setEnv(env) {
+  document.querySelectorAll('.env-toggle button').forEach(b => b.classList.remove('active'));
+  const btns = document.querySelectorAll('.env-toggle button');
+  document.getElementById('custom-url-wrap').style.display = 'none';
+  if (env === 'local') {
+    btns[0].classList.add('active');
+    BASE = 'http://localhost:3000';
+  } else if (env === 'prod') {
+    btns[1].classList.add('active');
+    BASE = PROD_URL || prompt('Enter your production base URL:') || BASE;
+  } else {
+    btns[2].classList.add('active');
+    document.getElementById('custom-url-wrap').style.display = 'flex';
+    BASE = document.getElementById('custom-url').value || BASE;
+  }
+  document.getElementById('base-display').textContent = BASE;
+}
+
+function applyCustom() {
+  BASE = document.getElementById('custom-url').value || 'http://localhost:3000';
+  document.getElementById('base-display').textContent = BASE;
+}
+
+function toggle(id) { document.getElementById(id).classList.toggle('open'); }
+
+function hl(json) {
+  return json.replace(/("(\\u[a-zA-Z0-9]{4}|\\[^u]|[^\\"])*"(\s*:)?|\b(true|false|null)\b|-?\d+(?:\.\d*)?(?:[eE][+\-]?\d+)?)/g, m => {
+    if (/^"/.test(m)) return /:$/.test(m) ? `<span class="jk">${m}</span>` : `<span class="js">${m}</span>`;
+    if (/true|false/.test(m)) return `<span class="jb">${m}</span>`;
+    if (/null/.test(m)) return `<span class="jz">${m}</span>`;
+    return `<span class="jn">${m}</span>`;
+  });
+}
+
+function setRes(prefix, status, body, ms) {
+  const pill = document.getElementById(`${prefix}-status`);
+  const pre  = document.getElementById(`${prefix}-res`);
+  const lat  = document.getElementById(`${prefix}-latency`);
+  pill.className = 'status-pill ' + (status < 300 ? 'ok' : status < 500 ? 'warn' : 'err');
+  pill.textContent = status;
+  lat.textContent = ms !== null ? `${ms}ms` : '';
+  pre.classList.add('loaded');
+  pre.innerHTML = hl(body);
+}
+
+function setLoading(prefix) {
+  const pill = document.getElementById(`${prefix}-status`);
+  const pre  = document.getElementById(`${prefix}-res`);
+  document.getElementById(`${prefix}-latency`).textContent = '';
+  pill.className = 'status-pill idle';
+  pill.innerHTML = '<span class="spinner"></span>sending';
+  pre.classList.remove('loaded');
+  pre.innerHTML = '// waiting...';
+}
+
+function copyRes(id) { navigator.clipboard.writeText(document.getElementById(id).innerText); }
+function setNlp(q)   { document.getElementById('s-query').value = q; document.getElementById('ep-search').classList.add('open'); }
+
+function buildQS(obj) {
+  const p = new URLSearchParams();
+  Object.entries(obj).forEach(([k,v]) => { if (v !== '' && v !== undefined && v !== null) p.set(k, v); });
+  const s = p.toString();
+  return s ? '?' + s : '';
+}
+
+async function runList() {
+  setLoading('list');
+  const qs = buildQS({
+    gender:   document.getElementById('l-gender').value,
+    age_group: document.getElementById('l-agegroup').value,
+    country_id: document.getElementById('l-country').value,
+    min_age:  document.getElementById('l-minage').value,
+    max_age:  document.getElementById('l-maxage').value,
+    min_gender_probability:  document.getElementById('l-mingp').value,
+    min_country_probability: document.getElementById('l-mincp').value,
+    sort_by:  document.getElementById('l-sortby').value,
+    order:    document.getElementById('l-order').value,
+    page:     document.getElementById('l-page').value,
+    limit:    document.getElementById('l-limit').value,
+  });
+  const t = Date.now();
+  try {
+    const res  = await fetch(`${BASE}/api/profiles${qs}`);
+    const data = await res.json();
+    setRes('list', res.status, JSON.stringify(data, null, 2), Date.now()-t);
+  } catch(e) { setRes('list', 0, JSON.stringify({error:e.message}), Date.now()-t); }
+}
+
+async function runSearch() {
+  const q = document.getElementById('s-query').value.trim();
+  if (!q) { alert('Enter a query first'); return; }
+  setLoading('search');
+  const qs = buildQS({ q, page: document.getElementById('s-page').value, limit: document.getElementById('s-limit').value });
+  const t = Date.now();
+  try {
+    const res  = await fetch(`${BASE}/api/profiles/search${qs}`);
+    const data = await res.json();
+    setRes('search', res.status, JSON.stringify(data, null, 2), Date.now()-t);
+  } catch(e) { setRes('search', 0, JSON.stringify({error:e.message}), Date.now()-t); }
+}
+
+async function runGet() {
+  const id = document.getElementById('get-id').value.trim();
+  if (!id) { alert('Enter a profile ID first'); return; }
+  setLoading('get');
+  const t = Date.now();
+  try {
+    const res  = await fetch(`${BASE}/api/profiles/${id}`);
+    const data = await res.json();
+    setRes('get', res.status, JSON.stringify(data, null, 2), Date.now()-t);
+  } catch(e) { setRes('get', 0, JSON.stringify({error:e.message}), Date.now()-t); }
+}
+
+async function runCreate() {
+  const name = document.getElementById('create-name').value.trim();
+  if (!name) { alert('Enter a name first'); return; }
+  setLoading('create');
+  const t = Date.now();
+  try {
+    const res  = await fetch(`${BASE}/api/profiles`, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({name}) });
+    const data = await res.json();
+    setRes('create', res.status, JSON.stringify(data, null, 2), Date.now()-t);
+    if (data.data && data.data.id) {
+      document.getElementById('get-id').value = data.data.id;
+      document.getElementById('del-id').value = data.data.id;
+    }
+  } catch(e) { setRes('create', 0, JSON.stringify({error:e.message}), Date.now()-t); }
+}
+
+async function runDelete() {
+  const id = document.getElementById('del-id').value.trim();
+  if (!id) { alert('Enter a profile ID first'); return; }
+  if (!confirm(`Delete profile ${id}?`)) return;
+  setLoading('del');
+  const t = Date.now();
+  try {
+    const res = await fetch(`${BASE}/api/profiles/${id}`, { method:'DELETE' });
+    if (res.status === 204) {
+      setRes('del', 204, JSON.stringify({status:'success',message:'204 No Content — deleted'}, null, 2), Date.now()-t);
+    } else {
+      const data = await res.json();
+      setRes('del', res.status, JSON.stringify(data, null, 2), Date.now()-t);
+    }
+  } catch(e) { setRes('del', 0, JSON.stringify({error:e.message}), Date.now()-t); }
+}
+
+// Open first two endpoints by default
+toggle('ep-list');
+toggle('ep-search');
+</script>
+</body>
+</html>
